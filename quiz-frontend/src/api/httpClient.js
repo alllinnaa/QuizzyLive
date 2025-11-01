@@ -8,7 +8,7 @@ async function request(path, { method = "GET", body, headers = {}, signal } = {}
     headers: { ...defaultHeaders, ...headers },
     body: body ? JSON.stringify(body) : undefined,
     signal,
-    credentials: "include", 
+    credentials: "include", // якщо знадобиться cookie/JWT в майбутньому
   });
 
   if (!resp.ok) {

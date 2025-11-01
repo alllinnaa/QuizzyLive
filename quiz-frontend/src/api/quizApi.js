@@ -16,3 +16,15 @@ export const quizApi = {
   // Видалити
   remove: (id) => httpClient.delete(`/quizzes/${id}`),
 };
+export async function listQuizzes() {
+  const res = await fetch(`${BASE}/quizzes/`);
+  if (!res.ok) throw new Error("Failed to load quizzes");
+  return res.json();
+}
+
+export async function getQuizQuestions(quizId) {
+  // Очікується ендпоїнт типу: /api/v1/quizzes/{id}/questions/
+  const res = await fetch(`${BASE}/quizzes/${quizId}/questions/`);
+  if (!res.ok) throw new Error("Failed to load questions");
+  return res.json();
+}
