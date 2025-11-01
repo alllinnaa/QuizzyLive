@@ -1,0 +1,26 @@
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #4a3dfc; 
+  font-family: "Poppins", sans-serif;
+  color: white;
+}
+
+/* Логотип у верхньому лівому куті */
+.logo {
+  position: absolute;
+  top: 20px;
+  left: 30px;
+  cursor: pointer;
+}
+
+.logo-text {
+  font-size: 24px;
+  font-weight: 700;
+  color: #ffffff;
+  transition: opacity 0.2s;
+}
+
+.logo-text:hover {
+  opacity: 0.8;
+}
