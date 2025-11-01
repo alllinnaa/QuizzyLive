@@ -1,0 +1,53 @@
+.app {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  background-color: #4a3dfc;
+  color: #fff;
+  font-family: "Poppins", sans-serif;
+}
+
+.title {
+  font-size: 3.5rem;
+  font-weight: 700;
+  margin-bottom: 0.3rem;
+}
+
+.subtitle {
+  font-size: 1.2rem;
+  color: #d0d0ff;
+  margin-bottom: 2rem;
+}
+
+.buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.btn {
+  border: none;
+  border-radius: 10px;
+  padding: 14px 36px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.btn.create {
+  background-color: #38e0b9;
+  color: #fff;
+}
+
+.btn.join {
+  background-color: #19c0ff;
+  color: #fff;
+}
+
+.btn:hover {
+  transform: scale(1.05);
+}

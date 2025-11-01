@@ -1,0 +1,314 @@
+.quiz-play-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 100vh;
+  padding: 2rem;
+  background: linear-gradient(135deg, #e3f2fd, #ffffff);
+  font-family: "Segoe UI", Roboto, sans-serif;
+}
+
+/* 🔹 Заголовок гравця */
+.player-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  max-width: 800px;
+  background: #1976d2;
+  color: white;
+  padding: 1rem 1.5rem;
+  border-radius: 12px;
+  margin-bottom: 2rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.player-name {
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.connection-status {
+  font-size: 0.95rem;
+}
+
+/* 🔹 Очікування */
+.waiting-box {
+  background: white;
+  border-radius: 16px;
+  padding: 3rem 2rem;
+  text-align: center;
+  max-width: 600px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.waiting-box h2 {
+  font-size: 1.8rem;
+  color: #333;
+  margin-bottom: 1rem;
+}
+
+.waiting-box p {
+  color: #666;
+  font-size: 1rem;
+}
+
+.pulse-indicator {
+  font-size: 2.5rem;
+  color: #4caf50;
+  margin-top: 1.5rem;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.3); opacity: 0.5; }
+}
+
+/* 🔹 Питання */
+.question-box {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 2rem;
+  max-width: 700px;
+  width: 100%;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+  animation: fadeIn 0.5s ease;
+}
+
+.question-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.question-header h3 {
+  color: #333;
+  font-size: 1.2rem;
+}
+
+.timer {
+  font-weight: bold;
+  font-size: 1.2rem;
+  color: #1976d2;
+  transition: color 0.3s;
+}
+
+.timer.urgent {
+  color: #f44336;
+  animation: urgent-blink 0.8s ease-in-out infinite;
+}
+
+@keyframes urgent-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.question-text {
+  font-size: 1.4rem;
+  color: #222;
+  margin: 1rem 0 2rem;
+  text-align: center;
+}
+
+/* 🔹 Відповіді */
+.answers-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.answer-btn {
+  background: #f5f5f5;
+  border: 2px solid transparent;
+  border-radius: 10px;
+  padding: 1rem;
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 1rem;
+  transition: all 0.3s;
+  min-height: 60px;
+}
+
+.answer-btn:hover:not(:disabled) {
+  background: #e3f2fd;
+  transform: translateY(-2px);
+}
+
+.answer-btn.selected {
+  background: #bbdefb;
+  border-color: #1976d2;
+}
+
+.answer-number {
+  background: #1976d2;
+  color: white;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+}
+
+.answer-text {
+  flex: 1;
+  color: #333;
+}
+
+.answer-submitted {
+  margin-top: 1.5rem;
+  color: #4caf50;
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+/* 🔹 Показ результатів */
+.reveal-box {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 2rem;
+  max-width: 700px;
+  width: 100%;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+  text-align: center;
+  animation: fadeIn 0.5s ease;
+}
+
+.answer-result {
+  background: #f5f5f5;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  padding: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.8rem;
+  transition: all 0.3s;
+}
+
+.answer-result.correct {
+  background: #e8f5e9;
+  border-color: #4caf50;
+  font-weight: 600;
+}
+
+.answer-result.selected {
+  background: #bbdefb;
+  border-color: #1976d2;
+}
+
+.check {
+  color: #4caf50;
+  font-weight: bold;
+  margin-left: auto;
+  font-size: 1.2rem;
+}
+
+.cross {
+  color: #f44336;
+  font-weight: bold;
+  margin-left: auto;
+  font-size: 1.2rem;
+}
+
+.result-message {
+  padding: 1rem;
+  border-radius: 8px;
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-top: 1.5rem;
+}
+
+.result-message.success {
+  background: #d4edda;
+  color: #155724;
+  border: 2px solid #c3e6cb;
+}
+
+.result-message.wrong {
+  background: #f8d7da;
+  color: #721c24;
+  border: 2px solid #f5c6cb;
+}
+
+.result-message.missed {
+  background: #fff3cd;
+  color: #856404;
+  border: 2px solid #ffeeba;
+}
+
+.waiting-next {
+  background: #f0f8ff;
+  padding: 1rem;
+  border-radius: 8px;
+  color: #1976d2;
+  font-weight: 500;
+  margin-top: 1.5rem;
+}
+
+/* 🔹 Статуси */
+.status-box {
+  text-align: center;
+  background: #fff;
+  border-radius: 16px;
+  padding: 3rem;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+  max-width: 500px;
+  margin: 6rem auto;
+}
+
+.status-box.error {
+  border: 2px solid #f44336;
+}
+
+.status-box h2 {
+  margin-bottom: 1rem;
+  color: #333;
+}
+
+.status-box p {
+  color: #666;
+  margin: 0.5rem 0;
+}
+
+.status-box button {
+  background: #1976d2;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  margin-top: 1rem;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.status-box button:hover {
+  background: #1565c0;
+  transform: translateY(-2px);
+}
+
+/* 🔹 Анімації */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* 🔹 Адаптив */
+@media (max-width: 768px) {
+  .answers-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .player-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+}

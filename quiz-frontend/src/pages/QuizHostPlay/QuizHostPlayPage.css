@@ -1,0 +1,393 @@
+/* === Основний контейнер === */
+.quiz-play-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #e3f2fd, #ffffff);
+  font-family: "Segoe UI", Roboto, sans-serif;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* === Верхня панель (header) === */
+.quiz-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #1976d2;
+  color: #fff;
+  padding: 1rem 2rem;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 1200px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+  margin-bottom: 2rem;
+}
+
+.quiz-header h1 {
+  font-size: 1.8rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.header-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-size: 0.95rem;
+}
+
+.end-quiz-btn {
+  background: #f44336;
+  border: none;
+  color: white;
+  padding: 0.7rem 1.4rem;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.end-quiz-btn:hover {
+  background: #d32f2f;
+  transform: translateY(-2px);
+}
+
+/* === Основна секція === */
+.host-content {
+  width: 100%;
+  max-width: 900px;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+/* === Налаштування часу === */
+.time-setting-box {
+  background: white;
+  border-radius: 16px;
+  padding: 2rem;
+  text-align: center;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  animation: fadeIn 0.3s ease;
+}
+
+.time-setting-box h2 {
+  color: #333;
+  margin-bottom: 1rem;
+}
+
+.question-preview {
+  font-style: italic;
+  color: #555;
+  margin-bottom: 1rem;
+}
+
+.time-input-group {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.time-input-group label {
+  font-weight: 500;
+  color: #333;
+}
+
+.time-input {
+  width: 90px;
+  padding: 0.5rem;
+  text-align: center;
+  font-size: 1.1rem;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  transition: border 0.3s;
+}
+
+.time-input:focus {
+  border-color: #1976d2;
+  outline: none;
+}
+
+.start-question-btn {
+  background: #4caf50;
+  color: white;
+  border: none;
+  padding: 0.9rem 1.8rem;
+  border-radius: 10px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.start-question-btn:hover {
+  background: #43a047;
+  transform: translateY(-2px);
+}
+
+/* === Активне питання === */
+.question-active-box {
+  background: white;
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  animation: fadeIn 0.3s ease;
+}
+
+.timer-display {
+  text-align: right;
+  font-weight: 600;
+  font-size: 1.4rem;
+  color: #1976d2;
+  margin-bottom: 1rem;
+}
+
+.time-critical {
+  color: #f44336;
+  animation: blink 1s infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.question-box {
+  margin-bottom: 1rem;
+}
+
+.question-box h2 {
+  text-align: center;
+  color: #222;
+  margin-bottom: 1rem;
+}
+
+.answers-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.answer-option {
+  background: #f7f7f7;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  padding: 0.9rem 1.2rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+  transition: all 0.3s;
+}
+
+.answer-option:hover {
+  background: #e3f2fd;
+}
+
+.option-number {
+  font-weight: bold;
+  color: #1976d2;
+}
+
+.option-text {
+  flex: 1;
+  color: #333;
+}
+
+.reveal-btn {
+  background: #ff9800;
+  color: white;
+  border: none;
+  padding: 0.9rem 1.8rem;
+  border-radius: 10px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.reveal-btn:hover {
+  background: #fb8c00;
+  transform: translateY(-2px);
+}
+
+/* === Показ правильної відповіді === */
+.reveal-box {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 2rem;
+  text-align: center;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  animation: fadeIn 0.3s ease;
+}
+
+.correct {
+  background: #e8f5e9 !important;
+  border: 2px solid #4caf50 !important;
+}
+
+.checkmark {
+  color: #4caf50;
+  font-weight: bold;
+  margin-left: auto;
+}
+
+.next-btn,
+.finish-btn {
+  background: #2196f3;
+  color: white;
+  border: none;
+  padding: 0.9rem 1.8rem;
+  border-radius: 10px;
+  font-size: 1.1rem;
+  margin-top: 1.2rem;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.next-btn:hover,
+.finish-btn:hover {
+  background: #1976d2;
+  transform: translateY(-2px);
+}
+
+/* === Очікування === */
+.waiting-box {
+  background: white;
+  border-radius: 16px;
+  padding: 2rem;
+  text-align: center;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  animation: fadeIn 0.3s ease;
+}
+
+.waiting-box p {
+  color: #333;
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+}
+
+.prepare-btn {
+  background: #673ab7;
+  color: white;
+  border: none;
+  padding: 0.9rem 1.8rem;
+  border-radius: 10px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.prepare-btn:hover {
+  background: #5e35b1;
+  transform: translateY(-2px);
+}
+
+/* === Таблиця лідерів === */
+.scoreboard-section {
+  background: white;
+  border-radius: 16px;
+  padding: 1.8rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  animation: fadeIn 0.3s ease;
+}
+
+.scoreboard-section h3 {
+  color: #222;
+  margin-bottom: 1rem;
+  font-weight: 600;
+}
+
+.scoreboard-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.scoreboard-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.7rem 1rem;
+  border-bottom: 1px solid #eee;
+  border-radius: 10px;
+  transition: all 0.2s;
+}
+
+.scoreboard-item:nth-child(1) {
+  background: #fffde7;
+  font-weight: 600;
+}
+
+.player-rank {
+  color: #1976d2;
+  font-weight: bold;
+}
+
+.player-name {
+  flex: 1;
+  text-align: left;
+  margin-left: 1rem;
+  color: #333;
+}
+
+.player-score {
+  color: #4caf50;
+  font-weight: 600;
+}
+
+.no-players {
+  text-align: center;
+  color: #777;
+  font-style: italic;
+  padding: 1rem;
+}
+
+/* === Стан завантаження / помилки === */
+.loading,
+.error {
+  text-align: center;
+  padding: 2rem;
+  font-size: 1.2rem;
+}
+
+.error {
+  color: #f44336;
+}
+
+/* === Анімації === */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* === Адаптивність === */
+@media (max-width: 768px) {
+  .quiz-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .host-content {
+    gap: 1.2rem;
+  }
+
+  .answers-list {
+    font-size: 0.95rem;
+  }
+
+  .time-setting-box,
+  .question-active-box,
+  .reveal-box,
+  .waiting-box,
+  .scoreboard-section {
+    padding: 1.5rem;
+  }
+
+  .quiz-header h1 {
+    font-size: 1.4rem;
+  }
+}

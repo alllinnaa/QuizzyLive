@@ -40,6 +40,7 @@
   position: relative;
   box-shadow: 0 12px 25px rgba(0, 0, 0, 0.3);
   min-width: 400px;
+  margin-top: 10px;
 }
 
 .left-pane h2 {
@@ -105,8 +106,8 @@
 
 /* ==== Поле питання ==== */
 .question-input {
-  width: 100%;
-  padding: 12px;
+  width: 96%;
+  padding: 17px;
   border-radius: 8px;
   border: none;
   outline: none;
@@ -149,6 +150,7 @@
   display: flex;
   align-items: center;
   gap: 5px;
+  color: #666;
 }
 
 /* ==== Кнопки форми ==== */
@@ -204,6 +206,7 @@
   overflow-y: auto;
   max-height: 80vh;
   min-width: 300px;
+  margin-top: 10px;
 }
 .archive-header {
   display: flex;
@@ -297,4 +300,20 @@
   text-align: center;
   font-style: italic;
   opacity: 0.9;
+}
+
+.start-btn {
+  background-color: #38e0b9;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 10px;
+  cursor: pointer;
+  margin-left: 6px;
+  color: white;
+  font-weight: 500;
+  transition: 0.2s ease;
+}
+.start-btn:hover {
+  background-color: #2dd0a9;
+  transform: scale(1.05);
 }

@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+import os
 from typing import List, Any
-from pydantic_settings import BaseSettings, SettingsConfigDict 
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field, AnyUrl, AliasChoices, field_validator
 
 
@@ -12,6 +13,12 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra="forbid",  # суворо: невідомі ключі заборонені (допомагає ловити орфографію)
     )
+
+    redis_url: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+    cors_origins: list[str] = (
+    os.getenv("CORS_ORIGINS", "http://localhost:5173").split(","))
+    #app_host: str = os.getenv("APP_HOST", "0.0.0.0")
+    #app_port: int = int(os.getenv("APP_PORT", "8000"))
 
     # Загальні налаштування
     APP_NAME: str = "QuizzyLive Backend"

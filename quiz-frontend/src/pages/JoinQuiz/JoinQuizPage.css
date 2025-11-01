@@ -1,0 +1,73 @@
+.join-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+  padding-top: 40px;
+}
+
+
+/* 🔸 Форма */
+.join-box {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+  padding: 40px 50px;
+  width: 400px;
+  text-align: center;
+  margin-top: 100px;
+}
+
+.join-title {
+  margin-bottom: 20px;
+  font-size: 28px;
+  color: #0d47a1;
+}
+
+.join-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+label {
+  font-weight: 500;
+  color: #333;
+  text-align: left;
+}
+
+.input-field {
+  width: 100%;
+  padding: 10px;
+  margin-top: 6px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 16px;
+}
+
+.input-field:focus {
+  outline: none;
+  border-color: #1976d2;
+  box-shadow: 0 0 4px rgba(25, 118, 210, 0.5);
+}
+
+.error {
+  color: #d32f2f;
+  margin: 0;
+}
+
+.join-btn {
+  margin-top: 16px;
+  background-color: #1976d2;
+  color: white;
+  font-size: 18px;
+  padding: 10px 0;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.join-btn:hover {
+  background-color: #1565c0;
+}

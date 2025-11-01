@@ -211,11 +211,14 @@ function CreateQuizPage() {
   // ------------------------------
   // РЕНДЕР
   // ------------------------------
-  return (
+  return (   
     <div className="create-quiz-container two-columns">
+      <div className="logo" onClick={() => navigate("/")}>
+        <span className="logo-text">QuizzyLive</span>
+      </div>
       {/* Ліва колонка: створення/редагування */}
       <div className="left-pane">
-        <button className="cancel-btn">
+        <button className="cancel-btn" onClick={() => navigate("/")}>
           ✖ Скасувати
         </button>
 
@@ -316,6 +319,13 @@ function CreateQuizPage() {
               <li key={q.id} className="archive-item">
                 <span className="archive-title">{q.title}</span>
                 <div className="archive-actions">
+                  <button
+                    className="start-btn"
+                    onClick={() => navigate(`/lobby/${q.id}`)}
+                    title="Почати вікторину"
+                  >
+                    🎮 почати
+                  </button>
                   <button
                     className="edit-btn"
                     onClick={() => fetchQuizAndEdit(q.id)}
