@@ -10,22 +10,11 @@ function App() {
   return (
     <Router>
       <Routes>
-        {/* Головна сторінка */}
-        <Route path="/" element={<HomePage/>}/>
-        
-        {/* Панель ведучого (список вікторин) */}
+        <Route path="/" element={<HomePage/>}/>      
         <Route path="/hostDashboard" element={<CreateQuizPage />}/>
-        
-        {/* Лоббі ведучого (очікування учасників) */}
-        <Route path="/lobby/:id" element={<QuizLobbyPage />} />
-        
-        {/* Гра ведучого (керування питаннями) */}
-        <Route path="/host-play/:id" element={<QuizHostPlayPage />} />
-        
-        {/* Приєднання учасника */}
-        <Route path="/join" element={<JoinQuizPage />} />
-        
-        {/* Гра учасника */}
+        <Route path="/lobby/:id" element={<QuizLobbyPage />} />    
+        <Route path="/host-play/:id" element={<QuizHostPlayPage />} />    
+        <Route path="/join" element={<JoinQuizPage />} />     
         <Route path="/quiz/:quizId" element={<QuizPlayPage />} />
       </Routes>
     </Router>

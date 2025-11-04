@@ -4,10 +4,6 @@ from app.core.config import settings
 _redis: Redis | None = None
 
 async def get_redis() -> Redis:
-    """
-    Повертає singleton-клієнт Redis. Підтримує TLS через схему rediss://
-    та налаштований для керованих хмарних провайдерів (Upstash, Redis Cloud).
-    """
     global _redis
     if _redis is None:
         _redis = Redis.from_url(

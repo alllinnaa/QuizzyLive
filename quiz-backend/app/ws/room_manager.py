@@ -8,7 +8,6 @@ REDIS_PREFIX = "quiz:room:"
 
 class RoomManager:
     def __init__(self):
-        # живі підключення (в межах одного інстанса)
         self.connections: Dict[str, Set[WebSocket]] = {}
 
     # --- Redis ключі ---
@@ -32,21 +31,21 @@ class RoomManager:
         """Реєструє WebSocket з'єднання в кімнаті"""
         await ws.accept()
         self.connections.setdefault(room, set()).add(ws)
-        print(f"✅ Зареєстровано з'єднання в кімнаті {room}. Всього: {len(self.connections[room])}")
+        print(f"Зареєстровано з'єднання в кімнаті {room}. Всього: {len(self.connections[room])}")
 
     async def unregister(self, room: str, ws: WebSocket):
         """Видаляє WebSocket з'єднання з кімнати"""
         try:
             if room in self.connections:
                 self.connections[room].discard(ws)
-                print(f"🔌 Видалено з'єднання з кімнати {room}. Залишилось: {len(self.connections[room])}")
+                print(f"Видалено з'єднання з кімнати {room}. Залишилось: {len(self.connections[room])}")
                 
                 # Видаляємо кімнату якщо порожня
                 if not self.connections[room]:
                     del self.connections[room]
-                    print(f"🗑️ Кімната {room} видалена (немає з'єднань)")
+                    print(f"Кімната {room} видалена (немає з'єднань)")
         except Exception as e:
-            print(f"⚠️ Помилка при видаленні з'єднання: {str(e)}")
+            print(f" Помилка при видаленні з'єднання: {str(e)}")
 
     async def broadcast(self, room: str, message: dict, exclude: Optional[WebSocket] = None):
         """
@@ -54,35 +53,35 @@ class RoomManager:
         
         Args:
             room: Код кімнати
-            message: Повідомлення (dict)
+            message: Повідомлення 
             exclude: WebSocket який треба виключити з розсилки (опціонально)
         """
         if room not in self.connections:
-            print(f"⚠️ Кімната {room} не існує для broadcast")
+            print(f"Кімната {room} не існує для broadcast")
             return
         
         connections = self.connections[room]
         message_type = message.get('type', 'unknown')
-        print(f"📢 Broadcast до {room}: {message_type} ({len(connections)} з'єднань)")
+        print(f"Broadcast до {room}: {message_type} ({len(connections)} з'єднань)")
         
         data = json.dumps(message)
         disconnected = []
         sent_count = 0
         
         for ws in list(connections):
-            # Пропускаємо excluded WebSocket
+            # Пропускаємо виключений WebSocket
             if exclude is not None and ws == exclude:
-                print(f"  ⏭️ Пропускаємо excluded websocket")
+                print(f"Пропускаємо excluded websocket")
                 continue
             
             try:
                 await ws.send_text(data)
                 sent_count += 1
             except Exception as e:
-                print(f"  ❌ Помилка відправки: {str(e)}")
+                print(f" Помилка відправки: {str(e)}")
                 disconnected.append(ws)
         
-        print(f"  ✅ Надіслано {sent_count} з {len(connections)} з'єднань")
+        print(f" Надіслано {sent_count} з {len(connections)} з'єднань")
         
         # Видаляємо відключені з'єднання
         for ws in disconnected:
@@ -110,7 +109,7 @@ class RoomManager:
         await r.expire(self.k_questions(room), 6 * 60 * 60)
         await r.expire(self.k_state(room), 6 * 60 * 60)
         
-        print(f"🎯 Створено сесію для кімнати {room} з {len(questions)} питаннями")
+        print(f"Створено сесію для кімнати {room} з {len(questions)} питаннями")
 
     async def load_questions(self, r: Redis, room: str) -> list[dict]:
         """Завантажує питання сесії з Redis"""
@@ -148,7 +147,7 @@ class RoomManager:
         questions = await self.load_questions(r, room)
         question = questions[qidx] if 0 <= qidx < len(questions) else None
         
-        print(f"▶️ Запущено питання {qidx} на {duration_ms}ms")
+        print(f"Запущено питання {qidx} на {duration_ms}ms")
         
         return {
             "type": "question_started",
@@ -164,7 +163,7 @@ class RoomManager:
         
         # Перевірка фази
         if state.get("phase") != "QUESTION_ACTIVE":
-            print(f"⚠️ Відповідь відхилена: питання неактивне (phase={state.get('phase')})")
+            print(f"Відповідь відхилена: питання неактивне (phase={state.get('phase')})")
             return False
         
         # Перевірка часу
@@ -173,7 +172,7 @@ class RoomManager:
         now_ms = int(time.time() * 1000)
         
         if started is None or now_ms > started + dur:
-            print(f"⚠️ Відповідь відхилена: час вийшов")
+            print(f"Відповідь відхилена: час вийшов")
             return False
         
         # зберігаємо першу відповідь гравця; повторні ігноруємо
@@ -181,13 +180,13 @@ class RoomManager:
         exists = await r.hexists(key, player_id)
         
         if exists:
-            print(f"⚠️ Відповідь відхилена: гравець вже відповідав")
+            print(f"Відповідь відхилена: гравець вже відповідав")
             return False
         
         await r.hset(key, mapping={player_id: str(option_index)})
         await r.expire(key, 6 * 60 * 60)
         
-        print(f"✅ Збережено відповідь: player={player_id[:8]}, option={option_index}")
+        print(f"Збережено відповідь: player={player_id[:8]}, option={option_index}")
         return True
 
     async def reveal_answer(self, r: Redis, room: str, qidx: int):
@@ -195,7 +194,7 @@ class RoomManager:
         # рахуємо результати для питання
         questions = await self.load_questions(r, room)
         question = questions[qidx]
-        correct_idx = int(question["correct_answer"])  # 0..3
+        correct_idx = int(question["correct_answer"])  
         
         answers = await r.hgetall(self.k_answers(room, qidx))
         
@@ -214,7 +213,7 @@ class RoomManager:
         for opt in answers.values():
             counts[str(opt)] = counts.get(str(opt), 0) + 1
         
-        print(f"👁️ Розкрито відповідь {qidx}: правильна={correct_idx}, правильних відповідей={correct_count}/{len(answers)}")
+        print(f"Розкрито відповідь {qidx}: правильна={correct_idx}, правильних відповідей={correct_count}/{len(answers)}")
         
         return {
             "type": "answer_revealed",
@@ -246,7 +245,7 @@ class RoomManager:
         # Сортуємо за балами (від більшого до меншого)
         result.sort(key=lambda x: x["score"], reverse=True)
         
-        print(f"📊 Scoreboard для {room}: {len(result)} гравців")
+        print(f"Scoreboard для {room}: {len(result)} гравців")
         for p in result:
             print(f"   - {p['name']}: {p['score']} балів")
         

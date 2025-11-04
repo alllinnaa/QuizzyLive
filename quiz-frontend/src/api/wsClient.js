@@ -13,16 +13,16 @@ export function createQuizSocket({ role, roomCode, name, onMessage }) {
   }
   
   const url = `${WS_BASE_URL}?${params.toString()}`;
-  console.log("🔗 Підключення до:", url);
+  console.log("Підключення до:", url);
 
   const socket = new WebSocket(url);
 
   socket.onopen = () => {
-    console.log("✅ WebSocket підключено:", { role, roomCode, name });
+    console.log(" WebSocket підключено:", { role, roomCode, name });
   };
 
   socket.onclose = (event) => {
-    console.log("❌ WebSocket закрито:", {
+    console.log(" WebSocket закрито:", {
       code: event.code,
       reason: event.reason,
       wasClean: event.wasClean
@@ -30,26 +30,25 @@ export function createQuizSocket({ role, roomCode, name, onMessage }) {
   };
 
   socket.onerror = (err) => {
-    console.error("⚠️ WebSocket помилка:", err);
+    console.error("WebSocket помилка:", err);
   };
 
   socket.onmessage = (event) => {
     try {
       const data = JSON.parse(event.data);
-      console.log("📩 Отримано повідомлення:", data);
+      console.log("Отримано повідомлення:", data);
       onMessage?.(data);
     } catch (err) {
-      console.error("❌ JSON parse error:", err, "Data:", event.data);
+      console.error("JSON parse error:", err, "Data:", event.data);
     }
   };
 
-  // Метод для надсилання JSON
   socket.sendJson = (obj) => {
     if (socket.readyState === WebSocket.OPEN) {
-      console.log("📤 Надсилаємо:", obj);
+      console.log("Надсилаємо:", obj);
       socket.send(JSON.stringify(obj));
     } else {
-      console.warn("⚠️ WebSocket не готовий, стан:", socket.readyState);
+      console.warn("WebSocket не готовий, стан:", socket.readyState);
     }
   };
 

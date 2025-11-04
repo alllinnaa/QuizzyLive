@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { quizApi } from "../../api/quizApi";
 import { createQuizSocket } from "../../api/wsClient";
@@ -16,11 +16,11 @@ function QuizHostPlayPage() {
   const [remainingTime, setRemainingTime] = useState(0);
   const [loading, setLoading] = useState(true);
   
-  // Налаштування часу
   const [isSettingTime, setIsSettingTime] = useState(false);
   const [timeForQuestion, setTimeForQuestion] = useState(30);
+  
+  const wsInitialized = useRef(false);
 
-  // ✅ Завантажуємо вікторину
   useEffect(() => {
     const fetchQuiz = async () => {
       try {
@@ -36,25 +36,24 @@ function QuizHostPlayPage() {
     fetchQuiz();
   }, [id, navigate]);
 
-  // ✅ WebSocket для ведучого
   useEffect(() => {
-    if (!quiz) return;
-
-    console.log("🎯 Підключення ведучого до гри, roomCode:", id);
+    if (!quiz || wsInitialized.current) return;
+    
+    wsInitialized.current = true;
+    console.log("Підключення ведучого до гри, roomCode:", id);
 
     const socket = createQuizSocket({
       role: "host",
       roomCode: id,
       onMessage: (msg) => {
-        console.log("📨 Host (play) отримав:", msg);
+        console.log("Host (play) отримав:", msg);
 
         if (msg.type === "state_sync") {
-          console.log("✅ State sync:", msg);
+          console.log("State sync:", msg);
           setPhase(msg.phase || "LOBBY");
           
-          // ✅ Завантажуємо scoreboard
           if (msg.scoreboard && Array.isArray(msg.scoreboard)) {
-            console.log("📊 Оновлення scoreboard з state_sync:", msg.scoreboard);
+            console.log("Оновлення scoreboard з state_sync:", msg.scoreboard);
             setScoreboard(msg.scoreboard);
           }
           
@@ -64,7 +63,7 @@ function QuizHostPlayPage() {
           }
         } 
         else if (msg.type === "question_started") {
-          console.log("▶️ Питання почалось:", msg.question);
+          console.log("Питання почалось:", msg.question);
           setCurrentQuestion(msg.question);
           setQuestionIndex(msg.questionIndex);
           setRemainingTime(Math.floor(msg.durationMs / 1000));
@@ -72,29 +71,28 @@ function QuizHostPlayPage() {
           setIsSettingTime(false);
         } 
         else if (msg.type === "answer_revealed") {
-          console.log("👁️ Відповідь розкрито");
+          console.log("Відповідь розкрито");
           setPhase("REVEAL");
           
-          // ✅ Оновлюємо scoreboard
           if (msg.scoreboard && Array.isArray(msg.scoreboard)) {
-            console.log("📊 Оновлення scoreboard після reveal:", msg.scoreboard);
+            console.log("Оновлення scoreboard після reveal:", msg.scoreboard);
             setScoreboard(msg.scoreboard);
           }
         } 
         else if (msg.type === "scoreboard_updated") {
-          console.log("📊 Оновлення scoreboard:", msg.scoreboard);
+          console.log("Оновлення scoreboard:", msg.scoreboard);
           setScoreboard(msg.scoreboard);
         }
         else if (msg.type === "player_joined") {
-          console.log("✅ Новий учасник:", msg.playerName);
+          console.log("Новий учасник:", msg.playerName);
           
           setScoreboard(prev => {
             const exists = prev.find(p => p.name === msg.playerName || p.playerId === msg.playerId);
             if (exists) {
-              console.log("⚠️ Учасник вже існує:", msg.playerName);
+              console.log("Учасник вже існує:", msg.playerName);
               return prev;
             }
-            console.log("➕ Додаємо учасника:", msg.playerName);
+            console.log("Додаємо учасника:", msg.playerName);
             return [...prev, { 
               name: msg.playerName, 
               playerId: msg.playerId,
@@ -103,35 +101,36 @@ function QuizHostPlayPage() {
           });
         }
         else if (msg.type === "player_left") {
-          console.log("👋 Учасник вийшов:", msg.playerName);
+          console.log("Учасник вийшов:", msg.playerName);
           setScoreboard(prev => prev.filter(p => p.name !== msg.playerName));
         }
       },
     });
 
     socket.onopen = () => {
-      console.log("✅ WebSocket host (play) підключено");
+      console.log("WebSocket host (play) підключено");
     };
 
     socket.onerror = (err) => {
-      console.error("⚠️ WebSocket помилка:", err);
+      console.error("WebSocket помилка:", err);
     };
 
     socket.onclose = () => {
-      console.log("❌ WebSocket закрито");
+      console.log("WebSocket закрито");
+      wsInitialized.current = false;
     };
 
     setWs(socket);
 
     return () => {
-      console.log("🧹 Закриваємо WebSocket (play cleanup)");
+      console.log("Закриваємо WebSocket (play cleanup)");
       if (socket.readyState === WebSocket.OPEN) {
         socket.close();
       }
+      wsInitialized.current = false;
     };
   }, [quiz, id]);
 
-  // ⏱️ Таймер
   useEffect(() => {
     if (phase === "QUESTION_ACTIVE" && remainingTime > 0) {
       const timer = setInterval(() => {
@@ -147,7 +146,6 @@ function QuizHostPlayPage() {
     }
   }, [phase, remainingTime]);
 
-  // 🎯 Підготовка до питання
   const handlePrepareQuestion = () => {
     if (questionIndex >= quiz.questions.length) {
       alert("Це було останнє питання!");
@@ -157,31 +155,28 @@ function QuizHostPlayPage() {
     setIsSettingTime(true);
   };
 
-  // ▶️ Почати питання
   const handleStartQuestion = () => {
     if (!ws || ws.readyState !== WebSocket.OPEN) {
       alert("WebSocket не підключено!");
       return;
     }
 
-    console.log("🚀 Запуск питання з часом:", timeForQuestion);
+    console.log("Запуск питання з часом:", timeForQuestion);
     ws.sendJson({
       type: "host:next_question",
       durationMs: timeForQuestion * 1000,
     });
   };
 
-  // 👁️ Показати відповідь
   const handleRevealAnswer = () => {
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
 
-    console.log("👁️ Розкриття відповіді");
+    console.log("Розкриття відповіді");
     ws.sendJson({
       type: "host:reveal_answer",
     });
   };
 
-  // ⏭️ Наступне питання
   const handleNextQuestion = () => {
     const nextIndex = questionIndex + 1;
     if (nextIndex >= quiz.questions.length) {
@@ -195,14 +190,13 @@ function QuizHostPlayPage() {
     }
   };
 
-  // ❌ Завершити вікторину
   const handleEndQuiz = () => {
     if (!ws || ws.readyState !== WebSocket.OPEN) {
       navigate("/hostDashboard");
       return;
     }
 
-    console.log("🏁 Завершення вікторини");
+    console.log("Завершення вікторини");
     ws.sendJson({
       type: "host:end_session",
     });
@@ -223,7 +217,7 @@ function QuizHostPlayPage() {
   if (!quiz) {
     return (
       <div className="quiz-play-container">
-        <p className="error">❌ Вікторину не знайдено</p>
+        <p className="error">Вікторину не знайдено</p>
       </div>
     );
   }
@@ -239,15 +233,14 @@ function QuizHostPlayPage() {
           <span>Учасників: {scoreboard.length}</span>
         </div>
         <button className="end-quiz-btn" onClick={handleEndQuiz}>
-          ❌ Завершити
+          Завершити
         </button>
       </header>
 
       <div className="host-content">
-        {/* 🎯 НАЛАШТУВАННЯ ЧАСУ */}
         {isSettingTime && (
           <div className="time-setting-box">
-            <h2>⏱️ Встановіть час для питання</h2>
+            <h2>Встановіть час для питання</h2>
             {quiz.questions[questionIndex] && (
               <p className="question-preview">
                 {quiz.questions[questionIndex].questionText}
@@ -268,17 +261,16 @@ function QuizHostPlayPage() {
             </div>
 
             <button className="start-question-btn" onClick={handleStartQuestion}>
-              🚀 Почати питання
+              Почати питання
             </button>
           </div>
         )}
 
-        {/* 📝 АКТИВНЕ ПИТАННЯ */}
         {phase === "QUESTION_ACTIVE" && currentQuestion && (
           <div className="question-active-box">
             <div className="timer-display">
               <span className={remainingTime <= 5 ? "time-critical" : ""}>
-                ⏱️ {remainingTime}с
+                {remainingTime}с
               </span>
             </div>
 
@@ -296,12 +288,11 @@ function QuizHostPlayPage() {
             </div>
 
             <button className="reveal-btn" onClick={handleRevealAnswer}>
-              👁️ Показати відповідь
+              Показати відповідь
             </button>
           </div>
         )}
 
-        {/* ✅ ПОКАЗ ПРАВИЛЬНОЇ ВІДПОВІДІ */}
         {phase === "REVEAL" && currentQuestion && (
           <div className="reveal-box">
             <h2>Правильна відповідь:</h2>
@@ -329,29 +320,27 @@ function QuizHostPlayPage() {
 
             {questionIndex < totalQuestions - 1 ? (
               <button className="next-btn" onClick={handleNextQuestion}>
-                ➡️ Наступне питання
+                Наступне питання
               </button>
             ) : (
               <button className="finish-btn" onClick={handleEndQuiz}>
-                🏁 Завершити вікторину
+                Завершити вікторину
               </button>
             )}
           </div>
         )}
 
-        {/* ⏳ ОЧІКУВАННЯ (LOBBY або WAITING) */}
         {(phase === "LOBBY" || phase === "WAITING") && !isSettingTime && (
           <div className="waiting-box">
-            <p>⏳ Готово до старту</p>
+            <p>Готово до старту</p>
             <button className="prepare-btn" onClick={handlePrepareQuestion}>
-              📝 Підготувати питання
+              Підготувати питання
             </button>
           </div>
         )}
 
-        {/* 📊 ТАБЛИЦЯ ЛІДЕРІВ */}
         <div className="scoreboard-section">
-          <h3>📊 Таблиця лідерів ({scoreboard.length})</h3>
+          <h3>Таблиця лідерів ({scoreboard.length})</h3>
           {scoreboard.length > 0 ? (
             <ol className="scoreboard-list">
               {scoreboard

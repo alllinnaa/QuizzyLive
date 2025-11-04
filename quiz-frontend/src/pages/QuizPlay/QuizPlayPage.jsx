@@ -16,43 +16,46 @@ function QuizPlayPage() {
   const [connectionStatus, setConnectionStatus] = useState("connecting");
   
   const timerRef = useRef(null);
-  const socketRef = useRef(null);
+  const wsInitialized = useRef(false);
 
   useEffect(() => {
+    if (wsInitialized.current) return;
+    
+    wsInitialized.current = true;
+    
     const name = localStorage.getItem("playerName") || "Player";
     setPlayerName(name);
 
-    console.log("🎮 Підключення учасника:", { name, quizId });
+    console.log("Підключення учасника:", { name, quizId });
 
     const socket = createQuizSocket({
       role: "player",
       roomCode: quizId,
       name: name,
       onMessage: (msg) => {
-        console.log("🎮 Player отримав:", msg);
+        console.log("Player отримав:", msg);
 
         switch (msg.type) {
           case "state_sync":
-            console.log("✅ State sync:", msg.phase);
+            console.log("State sync:", msg.phase);
             setPhase(msg.phase || "WAITING");
             setConnectionStatus("connected");
             break;
 
           case "player_joined":
-            console.log("✅ Успішно приєдналися до вікторини!");
+            console.log("Успішно приєдналися до вікторини!");
             setConnectionStatus("connected");
             setPhase("WAITING");
             break;
 
           case "question_started":
-            console.log("📝 Почалось питання:", msg.question);
+            console.log("Почалось питання:", msg.question);
             setQuestion(msg.question);
             setRemaining(Math.floor(msg.durationMs / 1000));
             setPhase("QUESTION_ACTIVE");
             setSelected(null);
             setCorrectAnswer(null);
             
-            // Запускаємо таймер
             if (timerRef.current) clearInterval(timerRef.current);
             timerRef.current = setInterval(() => {
               setRemaining(prev => {
@@ -66,7 +69,7 @@ function QuizPlayPage() {
             break;
 
           case "answer_revealed":
-            console.log("👁️ Показано відповідь:", msg.correctIndex);
+            console.log("Показано відповідь:", msg.correctIndex);
             setPhase("REVEAL");
             setCorrectAnswer(msg.correctIndex);
             if (timerRef.current) clearInterval(timerRef.current);
@@ -75,12 +78,12 @@ function QuizPlayPage() {
           case "session_ended":
           case "quiz_ended":
             if (timerRef.current) clearInterval(timerRef.current);
-            alert("🎉 Вікторина завершена!");
+            alert("Вікторина завершена!");
             navigate("/");
             break;
 
           case "error":
-            console.error("❌ Помилка від сервера:", msg.message);
+            console.error("Помилка від сервера:", msg.message);
             alert(`Помилка: ${msg.message}`);
             setConnectionStatus("error");
             if (msg.message?.includes("not found") || msg.message?.includes("does not exist")) {
@@ -89,46 +92,47 @@ function QuizPlayPage() {
             break;
 
           default:
-            console.log("❓ Невідомий тип повідомлення:", msg.type);
+            console.log("Невідомий тип повідомлення:", msg.type);
         }
       },
     });
 
     socket.onopen = () => {
-      console.log("✅ WebSocket підключено як player");
+      console.log("WebSocket підключено як player");
       setConnectionStatus("connected");
-      socketRef.current = socket;
     };
 
     socket.onclose = (event) => {
-      console.log("❌ WebSocket закрито:", event);
+      console.log("WebSocket закрито:", event);
       setConnectionStatus("disconnected");
+      wsInitialized.current = false;
       if (timerRef.current) clearInterval(timerRef.current);
     };
 
     socket.onerror = (error) => {
-      console.error("⚠️ WebSocket помилка:", error);
+      console.error("WebSocket помилка:", error);
       setConnectionStatus("error");
     };
 
     setWs(socket);
 
     return () => {
-      console.log("🧹 Очищення WebSocket з'єднання");
+      console.log("Очищення WebSocket з'єднання");
       if (timerRef.current) clearInterval(timerRef.current);
       if (socket.readyState === WebSocket.OPEN) {
         socket.close();
       }
+      wsInitialized.current = false;
     };
   }, [quizId, navigate]);
 
   const handleAnswer = (idx) => {
     if (selected !== null || phase !== "QUESTION_ACTIVE") {
-      console.log("⚠️ Відповідь вже надіслана або питання неактивне");
+      console.log("Відповідь вже надіслана або питання неактивне");
       return;
     }
     
-    console.log("📤 Надсилаємо відповідь:", idx);
+    console.log("Надсилаємо відповідь:", idx);
     setSelected(idx);
     
     if (ws && ws.readyState === WebSocket.OPEN) {
@@ -138,7 +142,7 @@ function QuizPlayPage() {
         optionIndex: idx,
       });
     } else {
-      console.error("❌ WebSocket не підключено!");
+      console.error("WebSocket не підключено!");
     }
   };
 
@@ -146,7 +150,7 @@ function QuizPlayPage() {
     return (
       <div className="quiz-play-page">
         <div className="status-box">
-          <h2>⏳ Підключення до вікторини...</h2>
+          <h2>Підключення до вікторини...</h2>
           <p>Код: {quizId}</p>
           <p>Ім'я: {playerName}</p>
         </div>
@@ -158,11 +162,11 @@ function QuizPlayPage() {
     return (
       <div className="quiz-play-page">
         <div className="status-box error">
-          <h2>❌ Помилка підключення</h2>
+          <h2>Помилка підключення</h2>
           <p>Не вдалося підключитися до вікторини</p>
           <p>Перевірте код вікторини та спробуйте ще раз</p>
           <button onClick={() => navigate("/join")}>
-            ↩ Повернутись
+            Повернутись
           </button>
         </div>
       </div>
@@ -173,13 +177,13 @@ function QuizPlayPage() {
     return (
       <div className="quiz-play-page">
         <div className="status-box error">
-          <h2>🔴 З'єднання втрачено</h2>
+          <h2>З'єднання втрачено</h2>
           <p>Зв'язок з сервером перервано</p>
           <button onClick={() => window.location.reload()}>
-            🔄 Перепідключитись
+            Перепідключитись
           </button>
           <button onClick={() => navigate("/join")}>
-            ↩ Повернутись
+            Повернутись
           </button>
         </div>
       </div>
@@ -189,15 +193,15 @@ function QuizPlayPage() {
   return (
     <div className="quiz-play-page">
       <div className="player-header">
-        <span className="player-name">👤 {playerName}</span>
+        <span className="player-name">{playerName}</span>
         <span className="connection-status">
-          {connectionStatus === "connected" ? "🟢 Підключено" : "🔴 Відключено"}
+          {connectionStatus === "connected" ? "Підключено" : "Відключено"}
         </span>
       </div>
 
       {phase === "WAITING" && (
         <div className="waiting-box">
-          <h2>⏳ Очікуємо початку вікторини...</h2>
+          <h2>Очікуємо початку вікторини...</h2>
           <p>Ведучий почне гру незабаром</p>
           <div className="pulse-indicator">●</div>
         </div>
@@ -208,7 +212,7 @@ function QuizPlayPage() {
           <div className="question-header">
             <h3>Питання {question.position + 1}</h3>
             <div className={`timer ${remaining <= 5 ? 'urgent' : ''}`}>
-              ⏱️ {remaining} сек
+              {remaining} сек
             </div>
           </div>
 
@@ -229,7 +233,7 @@ function QuizPlayPage() {
           </div>
 
           {selected !== null && (
-            <p className="answer-submitted">✅ Відповідь надіслано!</p>
+            <p className="answer-submitted">Відповідь надіслано!</p>
           )}
         </div>
       )}
@@ -256,17 +260,17 @@ function QuizPlayPage() {
           </div>
 
           {selected === correctAnswer && (
-            <p className="result-message success">🎉 Правильно! +100 балів</p>
+            <p className="result-message success">Правильно! +100 балів</p>
           )}
           {selected !== correctAnswer && selected !== null && (
-            <p className="result-message wrong">😔 Неправильно. Правильна відповідь: {correctAnswer + 1}</p>
+            <p className="result-message wrong">Неправильно. Правильна відповідь: {correctAnswer + 1}</p>
           )}
           {selected === null && (
-            <p className="result-message missed">⏰ Час вийшов!</p>
+            <p className="result-message missed">Час вийшов!</p>
           )}
 
           <div className="waiting-next">
-            <p>⏳ Очікуємо наступного питання...</p>
+            <p>Очікуємо наступного питання...</p>
           </div>
         </div>
       )}

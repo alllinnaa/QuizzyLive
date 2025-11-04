@@ -51,11 +51,10 @@ class ServerStateSync(BaseModel):
     questionIndex: int
     startedAt: int | None = None
     durationMs: int | None = None
-    question: dict | None = None  # ✅ Змінено з Question на dict
+    question: dict | None = None  
     scoreboard: list[dict] | None = None
     reveal: dict | None = None
 
-# допоміжна
 EventPayload = (
     HostCreateSession | HostStartQuestion | HostRevealAnswer |
     HostNextQuestion | HostEndSession | PlayerJoin | PlayerAnswer

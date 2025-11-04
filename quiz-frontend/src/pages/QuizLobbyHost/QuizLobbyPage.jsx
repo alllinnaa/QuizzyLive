@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { quizApi } from "../../api/quizApi";
 import { createQuizSocket } from "../../api/wsClient";
@@ -6,14 +6,15 @@ import "./QuizLobbyPage.css";
 
 function QuizLobbyPage() {
   const navigate = useNavigate();
-  const { id } = useParams(); // UUID вікторини
+  const { id } = useParams();
   const [quiz, setQuiz] = useState(null);
   const [participants, setParticipants] = useState([]);
   const [ws, setWs] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  
+  const wsInitialized = useRef(false);
 
-  // ✅ Завантажуємо вікторину з бекенду
   useEffect(() => {
     const fetchQuiz = async () => {
       try {
@@ -29,30 +30,28 @@ function QuizLobbyPage() {
     fetchQuiz();
   }, [id]);
 
-  // ✅ WebSocket для ведучого
   useEffect(() => {
-    if (!quiz) return;
+    if (!quiz || wsInitialized.current) return;
+    
+    wsInitialized.current = true;
 
     const socket = createQuizSocket({
       role: "host",
-      roomCode: id, // ✅ використовуємо повний UUID
+      roomCode: id,
       onMessage: (msg) => {
-        console.log("📨 host отримав:", msg);
+        console.log("host отримав:", msg);
 
-        // ✅ Оновлення учасників
         if (msg.type === "state_sync") {
           if (msg.phase === "LOBBY" && msg.scoreboard) {
             setParticipants(msg.scoreboard);
           }
         } else if (msg.type === "player_joined") {
-          // Додаємо нового учасника
           setParticipants(prev => {
             const exists = prev.find(p => p.name === msg.playerName);
             if (exists) return prev;
             return [...prev, { name: msg.playerName, score: 0 }];
           });
         } else if (msg.type === "player_left") {
-          // Видаляємо учасника
           setParticipants(prev => 
             prev.filter(p => p.name !== msg.playerName)
           );
@@ -61,10 +60,10 @@ function QuizLobbyPage() {
     });
 
     socket.onopen = () => {
-      console.log("✅ WebSocket відкрито (host)");
+      console.log("WebSocket відкрито (host)");
       socket.sendJson({
         type: "host:create_session",
-        roomCode: id, // ✅ повний UUID
+        roomCode: id,
         quizId: id,
         questions: quiz.questions.map((q) => ({
           id: q.id,
@@ -76,26 +75,28 @@ function QuizLobbyPage() {
       });
     };
 
-    socket.onerror = (err) => console.error("⚠️ WebSocket помилка:", err);
-    socket.onclose = () => console.warn("❌ WebSocket закрито (host)");
+    socket.onerror = (err) => console.error("WebSocket помилка:", err);
+    socket.onclose = () => {
+      console.warn("WebSocket закрито (host)");
+      wsInitialized.current = false;
+    };
 
     setWs(socket);
+    
     return () => {
       if (socket.readyState === WebSocket.OPEN) {
         socket.close();
       }
+      wsInitialized.current = false;
     };
   }, [quiz, id]);
 
-  // ✅ Почати вікторину
   const handleStartQuiz = () => {
     if (!ws || ws.readyState !== WebSocket.OPEN) {
       alert("WebSocket не підключено!");
       return;
     }
-    
-    // НЕ надсилаємо start_quiz тут, тільки переходимо до керування
-    navigate(`/host-play/${id}`); // ✅ перехід до сторінки керування грою
+    navigate(`/host-play/${id}`); 
   };
 
   const handleCancel = () => {

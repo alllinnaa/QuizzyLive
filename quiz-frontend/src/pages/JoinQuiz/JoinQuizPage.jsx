@@ -17,7 +17,7 @@ function JoinQuizPage() {
     }
 
     localStorage.setItem("playerName", playerName);
-    navigate(`/quiz/${quizId}`); // ✅ передаємо повний UUID
+    navigate(`/quiz/${quizId}`); 
   };
 
   return (
