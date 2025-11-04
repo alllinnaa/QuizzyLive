@@ -9,7 +9,7 @@
   font-family: "Segoe UI", Roboto, sans-serif;
 }
 
-/* 🔹 Заголовок гравця */
+/* Заголовок гравця */
 .player-header {
   display: flex;
   justify-content: space-between;
@@ -33,7 +33,7 @@
   font-size: 0.95rem;
 }
 
-/* 🔹 Очікування */
+/* Очікування */
 .waiting-box {
   background: white;
   border-radius: 16px;
@@ -66,7 +66,7 @@
   50% { transform: scale(1.3); opacity: 0.5; }
 }
 
-/* 🔹 Питання */
+/* Питання */
 .question-box {
   background: #ffffff;
   border-radius: 16px;
@@ -113,7 +113,7 @@
   text-align: center;
 }
 
-/* 🔹 Відповіді */
+/* Відповіді */
 .answers-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -169,7 +169,7 @@
   font-size: 1.1rem;
 }
 
-/* 🔹 Показ результатів */
+/* Показ результатів */
 .reveal-box {
   background: #ffffff;
   border-radius: 16px;
@@ -253,7 +253,7 @@
   margin-top: 1.5rem;
 }
 
-/* 🔹 Статуси */
+/* Статуси */
 .status-box {
   text-align: center;
   background: #fff;
@@ -294,13 +294,13 @@
   transform: translateY(-2px);
 }
 
-/* 🔹 Анімації */
+/* Анімації */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* 🔹 Адаптив */
+/*  Адаптив */
 @media (max-width: 768px) {
   .answers-grid {
     grid-template-columns: 1fr;
@@ -311,4 +311,8 @@
     align-items: flex-start;
     gap: 0.5rem;
   }
+}
+
+.time-up-message {
+  color: #f44336;
 }

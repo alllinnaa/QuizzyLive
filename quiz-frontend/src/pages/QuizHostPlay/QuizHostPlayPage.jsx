@@ -7,6 +7,7 @@ import "./QuizHostPlayPage.css";
 function QuizHostPlayPage() {
   const navigate = useNavigate();
   const { id } = useParams();
+
   const [ws, setWs] = useState(null);
   const [quiz, setQuiz] = useState(null);
   const [currentQuestion, setCurrentQuestion] = useState(null);
@@ -15,11 +16,60 @@ function QuizHostPlayPage() {
   const [phase, setPhase] = useState("LOBBY");
   const [remainingTime, setRemainingTime] = useState(0);
   const [loading, setLoading] = useState(true);
-  
   const [isSettingTime, setIsSettingTime] = useState(false);
   const [timeForQuestion, setTimeForQuestion] = useState(30);
-  
+
   const wsInitialized = useRef(false);
+  const timerRef = useRef(null);
+  const questionEndTimeRef = useRef(null);
+
+  const stopTimer = () => {
+    questionEndTimeRef.current = null;
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    setRemainingTime(0);
+  };
+
+  const startSyncedTimer = (startedAt, durationMs) => {
+    if (!startedAt || !durationMs) {
+      stopTimer();
+      return;
+    }
+
+    const endTime = startedAt + durationMs;
+    questionEndTimeRef.current = endTime;
+
+    const computeRemaining = () => {
+      const now = Date.now();
+      const diffMs = endTime - now;
+      if (diffMs <= 0) return 0;
+      return Math.ceil(diffMs / 1000);
+    };
+
+    setRemainingTime(computeRemaining());
+
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+
+    timerRef.current = setInterval(() => {
+      setRemainingTime((prev) => {
+        const next = computeRemaining();
+        if (next <= 0) {
+          if (timerRef.current) {
+            clearInterval(timerRef.current);
+            timerRef.current = null;
+          }
+          return 0;
+        }
+        if (next === prev) return prev;
+        return next;
+      });
+    }, 250);
+  };
 
   useEffect(() => {
     const fetchQuiz = async () => {
@@ -33,12 +83,13 @@ function QuizHostPlayPage() {
         setLoading(false);
       }
     };
+
     fetchQuiz();
   }, [id, navigate]);
 
   useEffect(() => {
     if (!quiz || wsInitialized.current) return;
-    
+
     wsInitialized.current = true;
     console.log("Підключення ведучого до гри, roomCode:", id);
 
@@ -51,58 +102,66 @@ function QuizHostPlayPage() {
         if (msg.type === "state_sync") {
           console.log("State sync:", msg);
           setPhase(msg.phase || "LOBBY");
-          
+
           if (msg.scoreboard && Array.isArray(msg.scoreboard)) {
             console.log("Оновлення scoreboard з state_sync:", msg.scoreboard);
             setScoreboard(msg.scoreboard);
           }
-          
+
           if (msg.question) {
             setCurrentQuestion(msg.question);
             setQuestionIndex(msg.questionIndex || 0);
           }
-        } 
-        else if (msg.type === "question_started") {
+
+          if (msg.phase === "QUESTION_ACTIVE" && msg.startedAt && msg.durationMs) {
+            startSyncedTimer(msg.startedAt, msg.durationMs);
+          } else {
+            stopTimer();
+          }
+        } else if (msg.type === "question_started") {
           console.log("Питання почалось:", msg.question);
           setCurrentQuestion(msg.question);
           setQuestionIndex(msg.questionIndex);
-          setRemainingTime(Math.floor(msg.durationMs / 1000));
           setPhase("QUESTION_ACTIVE");
           setIsSettingTime(false);
-        } 
-        else if (msg.type === "answer_revealed") {
+          startSyncedTimer(msg.startedAt, msg.durationMs);
+        } else if (msg.type === "answer_revealed") {
           console.log("Відповідь розкрито");
+          stopTimer();
           setPhase("REVEAL");
-          
+
           if (msg.scoreboard && Array.isArray(msg.scoreboard)) {
             console.log("Оновлення scoreboard після reveal:", msg.scoreboard);
             setScoreboard(msg.scoreboard);
           }
-        } 
-        else if (msg.type === "scoreboard_updated") {
+        } else if (msg.type === "scoreboard_updated") {
           console.log("Оновлення scoreboard:", msg.scoreboard);
           setScoreboard(msg.scoreboard);
-        }
-        else if (msg.type === "player_joined") {
+        } else if (msg.type === "player_joined") {
           console.log("Новий учасник:", msg.playerName);
-          
-          setScoreboard(prev => {
-            const exists = prev.find(p => p.name === msg.playerName || p.playerId === msg.playerId);
+          setScoreboard((prev) => {
+            const exists = prev.find(
+              (p) => p.name === msg.playerName || p.playerId === msg.playerId
+            );
             if (exists) {
               console.log("Учасник вже існує:", msg.playerName);
               return prev;
             }
             console.log("Додаємо учасника:", msg.playerName);
-            return [...prev, { 
-              name: msg.playerName, 
-              playerId: msg.playerId,
-              score: 0 
-            }];
+            return [
+              ...prev,
+              { name: msg.playerName, playerId: msg.playerId, score: 0 },
+            ];
           });
-        }
-        else if (msg.type === "player_left") {
+        } else if (msg.type === "player_left") {
           console.log("Учасник вийшов:", msg.playerName);
-          setScoreboard(prev => prev.filter(p => p.name !== msg.playerName));
+          setScoreboard((prev) =>
+            prev.filter(
+              (p) =>
+                p.name !== msg.playerName &&
+                p.playerId !== msg.playerId
+            )
+          );
         }
       },
     });
@@ -118,12 +177,14 @@ function QuizHostPlayPage() {
     socket.onclose = () => {
       console.log("WebSocket закрито");
       wsInitialized.current = false;
+      stopTimer();
     };
 
     setWs(socket);
 
     return () => {
       console.log("Закриваємо WebSocket (play cleanup)");
+      stopTimer();
       if (socket.readyState === WebSocket.OPEN) {
         socket.close();
       }
@@ -131,23 +192,8 @@ function QuizHostPlayPage() {
     };
   }, [quiz, id]);
 
-  useEffect(() => {
-    if (phase === "QUESTION_ACTIVE" && remainingTime > 0) {
-      const timer = setInterval(() => {
-        setRemainingTime(prev => {
-          if (prev <= 1) {
-            clearInterval(timer);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-      return () => clearInterval(timer);
-    }
-  }, [phase, remainingTime]);
-
   const handlePrepareQuestion = () => {
-    if (questionIndex >= quiz.questions.length) {
+    if (!quiz || !quiz.questions || questionIndex >= quiz.questions.length) {
       alert("Це було останнє питання!");
       handleEndQuiz();
       return;
@@ -160,7 +206,6 @@ function QuizHostPlayPage() {
       alert("WebSocket не підключено!");
       return;
     }
-
     console.log("Запуск питання з часом:", timeForQuestion);
     ws.sendJson({
       type: "host:next_question",
@@ -170,7 +215,6 @@ function QuizHostPlayPage() {
 
   const handleRevealAnswer = () => {
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
-
     console.log("Розкриття відповіді");
     ws.sendJson({
       type: "host:reveal_answer",
@@ -178,6 +222,11 @@ function QuizHostPlayPage() {
   };
 
   const handleNextQuestion = () => {
+    if (!quiz || !quiz.questions) {
+      handleEndQuiz();
+      return;
+    }
+
     const nextIndex = questionIndex + 1;
     if (nextIndex >= quiz.questions.length) {
       alert("Це було останнє питання!");
@@ -187,20 +236,21 @@ function QuizHostPlayPage() {
       setPhase("LOBBY");
       setIsSettingTime(true);
       setTimeForQuestion(30);
+      stopTimer();
     }
   };
 
   const handleEndQuiz = () => {
     if (!ws || ws.readyState !== WebSocket.OPEN) {
+      stopTimer();
       navigate("/hostDashboard");
       return;
     }
-
     console.log("Завершення вікторини");
     ws.sendJson({
       type: "host:end_session",
     });
-
+    stopTimer();
     setTimeout(() => {
       navigate("/hostDashboard");
     }, 1000);
@@ -208,28 +258,32 @@ function QuizHostPlayPage() {
 
   if (loading) {
     return (
-      <div className="quiz-play-container">
-        <p className="loading">⏳ Завантаження...</p>
+      <div className="quiz-play-container loading">
+        <p>⏳ Завантаження...</p>
       </div>
     );
   }
 
   if (!quiz) {
     return (
-      <div className="quiz-play-container">
-        <p className="error">Вікторину не знайдено</p>
+      <div className="quiz-play-container error">
+        <p>Вікторину не знайдено</p>
       </div>
     );
   }
 
   const totalQuestions = quiz.questions?.length || 0;
+  const currentPreview = quiz.questions?.[questionIndex];
+  const isTimeCritical = remainingTime <= 5 && remainingTime > 0;
 
   return (
     <div className="quiz-play-container">
       <header className="quiz-header">
         <h1>{quiz.title}</h1>
         <div className="header-info">
-          <span>Питання {questionIndex + 1} / {totalQuestions}</span>
+          <span>
+            Питання {questionIndex + 1} / {totalQuestions}
+          </span>
           <span>Учасників: {scoreboard.length}</span>
         </div>
         <button className="end-quiz-btn" onClick={handleEndQuiz}>
@@ -239,18 +293,17 @@ function QuizHostPlayPage() {
 
       <div className="host-content">
         {isSettingTime && (
-          <div className="time-setting-box">
+          <section className="time-setting-box">
             <h2>Встановіть час для питання</h2>
-            {quiz.questions[questionIndex] && (
+            {currentPreview && (
               <p className="question-preview">
-                {quiz.questions[questionIndex].questionText}
+                {currentPreview.questionText}
               </p>
             )}
-
             <div className="time-input-group">
-              <label htmlFor="timeInput">Час (секунди):</label>
+              <label htmlFor="time-input">Час (секунди):</label>
               <input
-                id="timeInput"
+                id="time-input"
                 type="number"
                 min="5"
                 max="300"
@@ -259,65 +312,62 @@ function QuizHostPlayPage() {
                 className="time-input"
               />
             </div>
-
-            <button className="start-question-btn" onClick={handleStartQuestion}>
+            <button
+              className="start-question-btn"
+              onClick={handleStartQuestion}
+            >
               Почати питання
             </button>
-          </div>
+          </section>
         )}
 
         {phase === "QUESTION_ACTIVE" && currentQuestion && (
-          <div className="question-active-box">
-            <div className="timer-display">
-              <span className={remainingTime <= 5 ? "time-critical" : ""}>
-                {remainingTime}с
-              </span>
+          <section className="question-active-box">
+            <div
+              className={
+                "timer-display" + (isTimeCritical ? " time-critical" : "")
+              }
+            >
+              {remainingTime}с
             </div>
-
             <div className="question-box">
               <h2>{currentQuestion.question_text}</h2>
-
-              <ul className="answers-list">
-                {currentQuestion.answers?.map((answer, idx) => (
-                  <li key={idx} className="answer-option">
-                    <span className="option-number">{idx + 1}</span>
-                    <span className="option-text">{answer}</span>
-                  </li>
-                ))}
-              </ul>
             </div>
-
+            <ul className="answers-list">
+              {currentQuestion.answers?.map((answer, idx) => (
+                <li key={idx} className="answer-option">
+                  <span className="option-number">{idx + 1}</span>
+                  <span className="option-text">{answer}</span>
+                </li>
+              ))}
+            </ul>
             <button className="reveal-btn" onClick={handleRevealAnswer}>
               Показати відповідь
             </button>
-          </div>
+          </section>
         )}
 
         {phase === "REVEAL" && currentQuestion && (
-          <div className="reveal-box">
+          <section className="reveal-box">
             <h2>Правильна відповідь:</h2>
-
-            <div className="question-box">
-              <p className="question-text">{currentQuestion.question_text}</p>
-
-              <ul className="answers-list">
-                {currentQuestion.answers?.map((answer, idx) => (
-                  <li
-                    key={idx}
-                    className={`answer-option ${
-                      idx === currentQuestion.correct_answer ? "correct" : ""
-                    }`}
-                  >
-                    <span className="option-number">{idx + 1}</span>
-                    <span className="option-text">{answer}</span>
-                    {idx === currentQuestion.correct_answer && (
-                      <span className="checkmark">✓</span>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </div>
-
+            <p>{currentQuestion.question_text}</p>
+            <ul className="answers-list">
+              {currentQuestion.answers?.map((answer, idx) => (
+                <li
+                  key={idx}
+                  className={
+                    "answer-option" +
+                    (idx === currentQuestion.correct_answer ? " correct" : "")
+                  }
+                >
+                  <span className="option-number">{idx + 1}</span>
+                  <span className="option-text">{answer}</span>
+                  {idx === currentQuestion.correct_answer && (
+                    <span className="checkmark">✓</span>
+                  )}
+                </li>
+              ))}
+            </ul>
             {questionIndex < totalQuestions - 1 ? (
               <button className="next-btn" onClick={handleNextQuestion}>
                 Наступне питання
@@ -327,36 +377,44 @@ function QuizHostPlayPage() {
                 Завершити вікторину
               </button>
             )}
-          </div>
+          </section>
         )}
 
         {(phase === "LOBBY" || phase === "WAITING") && !isSettingTime && (
-          <div className="waiting-box">
+          <section className="waiting-box">
             <p>Готово до старту</p>
             <button className="prepare-btn" onClick={handlePrepareQuestion}>
               Підготувати питання
             </button>
-          </div>
+          </section>
         )}
 
-        <div className="scoreboard-section">
+        <section className="scoreboard-section">
           <h3>Таблиця лідерів ({scoreboard.length})</h3>
           {scoreboard.length > 0 ? (
-            <ol className="scoreboard-list">
+            <ul className="scoreboard-list">
               {scoreboard
+                .slice()
                 .sort((a, b) => b.score - a.score)
-                .map((player, i) => (
-                  <li key={player.playerId || i} className="scoreboard-item">
-                    <span className="player-rank">#{i + 1}</span>
+                .map((player, index) => (
+                  <li
+                    key={player.playerId || player.name}
+                    className="scoreboard-item"
+                  >
+                    <span className="player-rank">#{index + 1}</span>
                     <span className="player-name">{player.name}</span>
-                    <span className="player-score">{player.score} балів</span>
+                    <span className="player-score">
+                      {player.score} балів
+                    </span>
                   </li>
                 ))}
-            </ol>
+            </ul>
           ) : (
-            <p className="no-players">Немає учасників. Очікуємо підключення...</p>
+            <p className="no-players">
+              Немає учасників. Очікуємо підключення...
+            </p>
           )}
-        </div>
+        </section>
       </div>
     </div>
   );
