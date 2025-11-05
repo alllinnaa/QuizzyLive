@@ -89,8 +89,3 @@ EventPayload = (
     | PlayerAnswer
 )
 
-#    Поки не використовуємо, а лише як тип DTO
-#    HostStartQuestion,
-#    HostRevealAnswer,
-#    HostNextQuestion,
-#    HostEndSession,
