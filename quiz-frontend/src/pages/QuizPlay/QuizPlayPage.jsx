@@ -3,12 +3,30 @@ import { useNavigate, useParams } from "react-router-dom";
 import { createQuizSocket } from "../../api/wsClient";
 import "./QuizPlayPage.css";
 
+function mapServerPhase(serverPhase) {
+  switch (serverPhase) {
+    case "LOBBY":
+      return "WAITING";
+    case "QUESTION_ACTIVE":
+      return "QUESTION_ACTIVE";
+    case "REVEAL":
+      return "REVEAL";
+    case "ENDED":
+      return "ENDED";
+    default:
+      return "WAITING";
+  }
+}
+
+const buildAnswerStorageKey = (quizId) => `quiz_answer_${quizId}`;
+
 function QuizPlayPage() {
   const navigate = useNavigate();
   const { quizId } = useParams();
 
   const [ws, setWs] = useState(null);
   const [question, setQuestion] = useState(null);
+  const [questionIndex, setQuestionIndex] = useState(-1);
   const [remaining, setRemaining] = useState(0);
   const [selected, setSelected] = useState(null);
   const [phase, setPhase] = useState("CONNECTING");
@@ -24,36 +42,126 @@ function QuizPlayPage() {
     if (wsInitialized.current) return;
     wsInitialized.current = true;
 
-    const name = localStorage.getItem("playerName") || "Player";
-    setPlayerName(name);
+    const nameFromStorage = localStorage.getItem("playerName") || "Player";
+    localStorage.setItem("playerName", nameFromStorage);
+    setPlayerName(nameFromStorage);
 
-    console.log("Підключення учасника:", { name, quizId });
+    console.log("Підключення учасника:", { name: nameFromStorage, quizId });
 
     const socket = createQuizSocket({
       role: "player",
       roomCode: quizId,
-      name: name,
+      name: nameFromStorage,
       onMessage: (msg) => {
         console.log("Player отримав:", msg);
 
         switch (msg.type) {
           case "state_sync": {
-            console.log("State sync:", msg.phase);
-            setPhase(msg.phase || "WAITING");
+            console.log(
+              "State sync від сервера:",
+              msg.phase,
+              "questionIndex=",
+              msg.questionIndex
+            );
+
+            const mappedPhase = mapServerPhase(msg.phase);
+            setPhase(mappedPhase);
             setConnectionStatus("connected");
+
+            const serverQidx =
+              typeof msg.questionIndex === "number" ? msg.questionIndex : -1;
+            setQuestionIndex(serverQidx);
+            setQuestion(msg.question || null);
+
+            if (timerRef.current) {
+              clearInterval(timerRef.current);
+            }
+
+            // відновлюємо відповідь з localStorage, якщо вона для цього ж питання
+            const answerKey = buildAnswerStorageKey(quizId);
+            let restoredSelected = null;
+            try {
+              const raw = window.localStorage.getItem(answerKey);
+              if (raw) {
+                const saved = JSON.parse(raw);
+                if (
+                  saved &&
+                  typeof saved.questionIndex === "number" &&
+                  saved.questionIndex === serverQidx &&
+                  typeof saved.selectedIndex === "number"
+                ) {
+                  restoredSelected = saved.selectedIndex;
+                } else {
+                  // інше питання — чистимо стару відповідь
+                  window.localStorage.removeItem(answerKey);
+                }
+              }
+            } catch (e) {
+              console.warn("Не вдалося відновити збережену відповідь:", e);
+            }
+
+            if (
+              msg.phase === "QUESTION_ACTIVE" &&
+              typeof msg.startedAt === "number" &&
+              typeof msg.durationMs === "number"
+            ) {
+              const now = Date.now();
+              const deadline = msg.startedAt + msg.durationMs;
+              const diffMs = deadline - now;
+              const initialSeconds = Math.max(0, Math.ceil(diffMs / 1000));
+
+              setRemaining(initialSeconds);
+              setTimeUp(initialSeconds <= 0);
+              setCorrectAnswer(null);
+
+              // важливо: не обнуляємо selected, а ставимо відновлене значення
+              setSelected(restoredSelected);
+
+              if (initialSeconds > 0) {
+                timerRef.current = setInterval(() => {
+                  setRemaining((prev) => {
+                    if (prev <= 1) {
+                      clearInterval(timerRef.current);
+                      setTimeUp(true);
+                      return 0;
+                    }
+                    return prev - 1;
+                  });
+                }, 1000);
+              }
+            } else {
+              setRemaining(0);
+              setTimeUp(false);
+              // для REVEAL нам теж потрібен selected, тому ставимо restoredSelected
+              setSelected(restoredSelected);
+              setCorrectAnswer(null);
+            }
+
             break;
           }
 
           case "player_joined": {
             console.log("Успішно приєдналися до вікторини!");
             setConnectionStatus("connected");
-            setPhase("WAITING");
+            setPhase((prev) => (prev === "CONNECTING" ? "WAITING" : prev));
             break;
           }
 
           case "question_started": {
             console.log("Почалось питання:", msg.question);
+
+            // нове питання -> чистимо локально збережену відповідь
+            const answerKey = buildAnswerStorageKey(quizId);
+            try {
+              window.localStorage.removeItem(answerKey);
+            } catch (e) {
+              console.warn("Не вдалося видалити збережену відповідь:", e);
+            }
+
             setQuestion(msg.question);
+            const qidx =
+              typeof msg.questionIndex === "number" ? msg.questionIndex : 0;
+            setQuestionIndex(qidx);
             setRemaining(Math.floor(msg.durationMs / 1000));
             setPhase("QUESTION_ACTIVE");
             setSelected(null);
@@ -92,6 +200,12 @@ function QuizPlayPage() {
           case "quiz_ended": {
             if (timerRef.current) {
               clearInterval(timerRef.current);
+            }
+            // на всякий випадок чистимо збережену відповідь
+            try {
+              window.localStorage.removeItem(buildAnswerStorageKey(quizId));
+            } catch (e) {
+              console.warn("Не вдалося очистити відповідь при завершенні:", e);
             }
             alert("Вікторина завершена!");
             navigate("/");
@@ -152,7 +266,7 @@ function QuizPlayPage() {
   }, [quizId, navigate]);
 
   const handleAnswer = (idx) => {
-    // 🔒 Блок: якщо час вийшов або питання вже не активне — нічого не робимо
+    // якщо час вийшов або питання неактивне — нічого не робимо
     if (timeUp || remaining <= 0) {
       console.log("Час вийшов, відповідь не приймається");
       return;
@@ -163,13 +277,28 @@ function QuizPlayPage() {
       return;
     }
 
-    console.log("Надсилаємо відповідь:", idx);
+    console.log("Надсилаємо відповідь:", {
+      optionIndex: idx,
+      questionIndex: questionIndex,
+    });
     setSelected(idx);
+
+    // зберігаємо відповідь у localStorage, щоб після перезавантаження знати, що вже відповіли
+    try {
+      const answerKey = buildAnswerStorageKey(quizId);
+      const payload = {
+        questionIndex: questionIndex,
+        selectedIndex: idx,
+      };
+      window.localStorage.setItem(answerKey, JSON.stringify(payload));
+    } catch (e) {
+      console.warn("Не вдалося зберегти відповідь у localStorage:", e);
+    }
 
     if (ws && ws.readyState === WebSocket.OPEN) {
       ws.sendJson({
         type: "player:answer",
-        questionIndex: question.position,
+        questionIndex: questionIndex,
         optionIndex: idx,
       });
     } else {
@@ -177,7 +306,7 @@ function QuizPlayPage() {
     }
   };
 
-  // 🔹 СТАН: підключення
+  // СТАН: підключення
   if (connectionStatus === "connecting" || phase === "CONNECTING") {
     return (
       <div className="quiz-play-page">
@@ -190,7 +319,7 @@ function QuizPlayPage() {
     );
   }
 
-  // 🔹 СТАН: помилка
+  // СТАН: помилка
   if (connectionStatus === "error") {
     return (
       <div className="quiz-play-page">
@@ -204,7 +333,7 @@ function QuizPlayPage() {
     );
   }
 
-  // 🔹 СТАН: відключено
+  // СТАН: відключено
   if (connectionStatus === "disconnected") {
     return (
       <div className="quiz-play-page">
@@ -220,12 +349,10 @@ function QuizPlayPage() {
     );
   }
 
-  // 🔹 Основний екран
   const isUrgent = remaining <= 5 && remaining > 0;
 
   return (
     <div className="quiz-play-page">
-      {/* Заголовок гравця */}
       <header className="player-header">
         <span className="player-name">{playerName}</span>
         <span className="connection-status">
@@ -233,7 +360,6 @@ function QuizPlayPage() {
         </span>
       </header>
 
-      {/* Очікування старту / наступного питання */}
       {phase === "WAITING" && (
         <div className="waiting-box">
           <h2>Очікуємо початку вікторини...</h2>
@@ -242,7 +368,6 @@ function QuizPlayPage() {
         </div>
       )}
 
-      {/* Активне питання */}
       {phase === "QUESTION_ACTIVE" && question && (
         <div className="question-box">
           <div className="question-header">
@@ -261,9 +386,7 @@ function QuizPlayPage() {
                 type="button"
                 onClick={() => handleAnswer(i)}
                 disabled={selected !== null || timeUp || remaining <= 0}
-                className={`answer-btn ${
-                  selected === i ? "selected" : ""
-                }`}
+                className={`answer-btn ${selected === i ? "selected" : ""}`}
               >
                 <span className="answer-number">{i + 1}</span>
                 <span className="answer-text">{ans}</span>
@@ -283,7 +406,6 @@ function QuizPlayPage() {
         </div>
       )}
 
-      {/* Показ результатів */}
       {phase === "REVEAL" && question && (
         <div className="reveal-box">
           <h2>Результати</h2>

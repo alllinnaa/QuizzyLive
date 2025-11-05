@@ -7,9 +7,23 @@ let currentOnMessage = null;
 
 function buildUrl({ role, roomCode, name }) {
   const params = new URLSearchParams({ role: role, roomCode: roomCode });
+
   if (name) {
     params.append("name", name);
   }
+
+  // якщо це гравець — додаємо playerId з localStorage
+  if (role === "player") {
+    try {
+      const storedPlayerId = window.localStorage.getItem("quizPlayerId");
+      if (storedPlayerId) {
+        params.append("playerId", storedPlayerId);
+      }
+    } catch (e) {
+      console.warn("Не вдалося прочитати quizPlayerId з localStorage:", e);
+    }
+  }
+
   return `${WS_BASE_URL}?${params.toString()}`;
 }
 
@@ -23,7 +37,12 @@ export function createQuizSocket({ role, roomCode, name, onMessage }) {
     (quizSocket.readyState === WebSocket.OPEN ||
       quizSocket.readyState === WebSocket.CONNECTING)
   ) {
-    console.log("Використовуємо існуючий WebSocket:", { url, role, roomCode, name });
+    console.log("Використовуємо існуючий WebSocket:", {
+      url,
+      role,
+      roomCode,
+      name,
+    });
     return quizSocket;
   }
 
@@ -72,6 +91,31 @@ export function createQuizSocket({ role, roomCode, name, onMessage }) {
     try {
       const data = JSON.parse(event.data);
       console.log("Отримано повідомлення:", data);
+
+      // при state_sync для гравця зберігаємо playerId/roomCode у localStorage
+      if (
+        data.type === "state_sync" &&
+        quizSocketParams &&
+        quizSocketParams.role === "player"
+      ) {
+        try {
+          if (typeof data.playerId === "string" && data.playerId.length > 0) {
+            window.localStorage.setItem("quizPlayerId", data.playerId);
+          }
+          if (typeof data.roomCode === "string" && data.roomCode.length > 0) {
+            window.localStorage.setItem("quizRoomCode", data.roomCode);
+          }
+          if (
+            typeof quizSocketParams.name === "string" &&
+            quizSocketParams.name.length > 0
+          ) {
+            window.localStorage.setItem("playerName", quizSocketParams.name);
+          }
+        } catch (e) {
+          console.warn("Не вдалося зберегти дані в localStorage:", e);
+        }
+      }
+
       if (currentOnMessage) {
         currentOnMessage(data);
       }
