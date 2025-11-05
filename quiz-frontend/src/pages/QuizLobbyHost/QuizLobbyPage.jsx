@@ -61,17 +61,23 @@ function QuizLobbyPage() {
 
     socket.onopen = () => {
       console.log("WebSocket відкрито (host)");
+      
+      // Формуємо questions згідно з бекенд схемою
+      const questions = quiz.questions.map((q) => ({
+        id: q.id,
+        question_text: q.questionText || q.question_text,
+        answers: q.answers,
+        correct_answer: q.correctAnswer !== undefined ? q.correctAnswer : q.correct_answer,
+        position: q.position !== undefined ? q.position : 0,
+      }));
+
+      console.log("Надсилаємо host:create_session з questions:", questions);
+
       socket.sendJson({
         type: "host:create_session",
         roomCode: id,
         quizId: id,
-        questions: quiz.questions.map((q) => ({
-          id: q.id,
-          question_text: q.questionText,
-          answers: q.answers,
-          correct_answer: q.correctAnswer,
-          position: q.position,
-        })),
+        questions: questions,
       });
     };
 
@@ -115,7 +121,7 @@ function QuizLobbyPage() {
     <div className="lobby-container">
       <div className="lobby-header">
         <button className="cancel-btn" onClick={handleCancel}>
-          ↩ Назад
+          Назад
         </button>
         <h1>{quiz?.title || "Завантаження..."}</h1>
       </div>
@@ -128,7 +134,7 @@ function QuizLobbyPage() {
             <h2>Код для підключення:</h2>
             <div className="code">{id}</div>
             <button className="copy-btn" onClick={handleCopyCode}>
-              📋 Скопіювати код
+              Скопіювати код
             </button>
             <p className="hint-text">
               Передайте цей код учасникам для підключення до вікторини
@@ -138,7 +144,7 @@ function QuizLobbyPage() {
           <div className="participants-box">
             <h3>Учасники ({participants.length}):</h3>
             {participants.length === 0 ? (
-              <p className="waiting-text">⏳ Очікуємо учасників...</p>
+              <p className="waiting-text">Очікуємо учасників...</p>
             ) : (
               <ul className="participants-list">
                 {participants.map((p, i) => (
@@ -156,11 +162,11 @@ function QuizLobbyPage() {
             onClick={handleStartQuiz}
             disabled={loading || !ws || ws.readyState !== WebSocket.OPEN}
           >
-            🚀 Почати вікторину
+            Почати вікторину
           </button>
           
           {ws?.readyState !== WebSocket.OPEN && !loading && (
-            <p className="warning-text">⚠️ Підключення до сервера...</p>
+            <p className="warning-text">Підключення до сервера...</p>
           )}
         </div>
       )}
